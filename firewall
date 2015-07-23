@@ -1,0 +1,92 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          custom firewall
+# Required-Start:    $remote_fs $syslog $network
+# Required-Stop:     $remote_fs $syslog $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: firewall initscript
+# Description:       Custom Firewall, placed in /etc/init.d.
+#                    script written by Gargi 2009 http://www.gargi.org
+### END INIT INFO
+
+
+IPT="/sbin/iptables"
+IPT6="/sbin/ip6tables"
+
+modprobe ip_conntrack_ftp
+
+case "$1" in
+   start)
+        echo 0 > /proc/sys/net/ipv4/ip_forward
+        echo 0 > /proc/sys/net/ipv6/conf/all/forwarding
+
+        # Flush old rules, old custom tables
+        $IPT --flush
+        $IPT -t nat --flush
+        $IPT --delete-chain
+        $IPT6 --flush
+        $IPT6 -t nat --flush
+        $IPT6 --delete-chain
+
+        # Set default policies for all three default chains
+        $IPT -P INPUT DROP
+        $IPT -P FORWARD DROP
+        $IPT -P OUTPUT ACCEPT
+        $IPT6 -P INPUT DROP
+        $IPT6 -P FORWARD DROP
+        $IPT6 -P OUTPUT ACCEPT
+
+        # Enable free use of loopback interfaces
+        $IPT -A INPUT -i lo -j ACCEPT
+        $IPT -A OUTPUT -o lo -j ACCEPT
+        $IPT -A INPUT -i tap0 -j ACCEPT
+        $IPT -A OUTPUT -o tap0 -j ACCEPT
+
+        $IPT6 -A INPUT -i lo -j ACCEPT
+        $IPT6 -A OUTPUT -o lo -j ACCEPT
+        $IPT6 -A INPUT -i tap0 -j ACCEPT
+        $IPT6 -A OUTPUT -o tap0 -j ACCEPT
+
+        # All TCP sessions should begin with SYN
+        $IPT -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
+        $IPT6 -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
+
+        # Accept inbound TCP packets (IPV4/IPV6)
+        $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+        $IPT6 -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+        # Accept inbound ICMP messages
+        #$IPT -A INPUT -p ICMP --icmp-type 8 -j ACCEPT
+        #$IPT -A INPUT -p ICMP --icmp-type 11 -j ACCEPT
+
+        #$IPT6 -A INPUT -p icmpv6 --icmpv6-type 8 -j ACCEPT
+        #$IPT6 -A INPUT -p icmpv6 --icmpv6-type 11 -j ACCEPT
+        #$IPT6 -A INPUT -p icmp -j ACCEPT
+        #$IPT6 -A INPUT -p ipv6-icmp -j ACCEPT
+
+        ;;
+   stop)
+        $IPT -F
+        $IPT -P INPUT ACCEPT
+        $IPT -P OUTPUT ACCEPT
+        echo "Warning! Firewall is stopped, server is unprotected now!"
+        ;;
+   restart)
+        $0 stop
+        sleep 1
+        $0 start
+        ;;
+   test)
+        $0 start
+        sleep 60
+        $0 stop
+        ;;
+   show)
+        watch --interval 0 'iptables-status'
+        ;;
+   *)
+   echo "Usage $0 {start|stop|restart|test}"
+        ;;
+esac
+
