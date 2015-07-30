@@ -40,13 +40,9 @@ case "$1" in
         # Enable free use of loopback interfaces
         $IPT -A INPUT -i lo -j ACCEPT
         $IPT -A OUTPUT -o lo -j ACCEPT
-        $IPT -A INPUT -i tap0 -j ACCEPT
-        $IPT -A OUTPUT -o tap0 -j ACCEPT
-
+    
         $IPT6 -A INPUT -i lo -j ACCEPT
         $IPT6 -A OUTPUT -o lo -j ACCEPT
-        $IPT6 -A INPUT -i tap0 -j ACCEPT
-        $IPT6 -A OUTPUT -o tap0 -j ACCEPT
 
         # All TCP sessions should begin with SYN
         $IPT -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
@@ -56,12 +52,12 @@ case "$1" in
         $IPT -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
         $IPT6 -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-        # Accept inbound ICMP messages
-        #$IPT -A INPUT -p ICMP --icmp-type 8 -j ACCEPT
-        #$IPT -A INPUT -p ICMP --icmp-type 11 -j ACCEPT
+        # Accept ICMP messages
+        $IPT -A INPUT -p ICMP --icmp-type 8 -j ACCEPT
+        $IPT -A INPUT -p ICMP --icmp-type 11 -j ACCEPT
 
-        #$IPT6 -A INPUT -p icmpv6 --icmpv6-type 8 -j ACCEPT
-        #$IPT6 -A INPUT -p icmpv6 --icmpv6-type 11 -j ACCEPT
+        $IPT6 -A INPUT -p icmpv6 --icmpv6-type 8 -j ACCEPT
+        $IPT6 -A INPUT -p icmpv6 --icmpv6-type 11 -j ACCEPT
         #$IPT6 -A INPUT -p icmp -j ACCEPT
         #$IPT6 -A INPUT -p ipv6-icmp -j ACCEPT
 
